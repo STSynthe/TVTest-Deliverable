@@ -16,7 +16,7 @@ env:
 
   GIT_TVTEST: TVTest
   GIT_TVTEST_REF: develop
-  GIT_TVTEST_PLATFORM: \'Win32\'\, \'x64\'
+  GIT_TVTEST_PLATFORM: "'Win32', 'x64'"
 
   # https://github.com/mstorsjo/fdk-aac
   GIT_FDK_AAC_REF: v2.0.3
@@ -57,6 +57,7 @@ jobs:
       run: |
         set
         dir
+        echo ${{vars.GIT_TVTEST_SHA}}
 
     - name: Pre-Build
       run: |
