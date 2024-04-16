@@ -48,16 +48,14 @@ jobs:
         msbuild-architecture: x64
 
     - name: Set
-      run: |
-        $Env:GIT_TVTEST_SHA = git show --format=%H --no-patch
-        Write-Host "GIT_TVTEST_SHA = ${Env:GIT_TVTEST_SHA}"
+      run: echo "GIT_TVTEST_SHA=$(git log -1 --format=%H)" >> $GITHUB_ENV
 
     - name: Sets
       shell: cmd
       run: |
         set
         dir
-        echo ${{vars.GIT_TVTEST_SHA}}
+        echo ${{env.GIT_TVTEST_SHA}}
 
     - name: Pre-Build
       run: |
@@ -90,5 +88,5 @@ jobs:
     - name: Upload
       uses: actions/upload-artifact@v4
       with:
-        name: ${{env.TVTest}}
+        name: ${{env.GIT_TVTEST}}-${{env.GIT_TVTEST_SHA}}
         path: package\*
