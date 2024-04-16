@@ -48,14 +48,15 @@ jobs:
         msbuild-architecture: x64
 
     - name: Set
-      run: echo "GIT_TVTEST_SHA=$(git log -1 --format=%H)" >> $GITHUB_STATE
+      id: set_tvtest_sha
+      run: echo "GIT_TVTEST_SHA=$(git log -1 --format=%H)" >> "$GITHUB_OUTPUT"
 
     - name: Sets
       shell: cmd
       run: |
         set
         dir
-        echo ${{env.GIT_TVTEST_SHA}}
+        echo ${{steps.set_tvtest_sha.outputs.GIT_TVTEST_SHA}}
 
     - name: Pre-Build
       run: |
@@ -77,16 +78,21 @@ jobs:
     # package.sh
     - name: Package
       run: |
-        New-Item "${Env:GITHUB_WORKSPACE}\package" -ItemType Directory
+        New-Item "$Env:GITHUB_WORKSPACE\package" -ItemType Directory
         foreach　($platform in (${{env.GIT_TVTEST_PLATFORM}})) {
-          $current = "${Env:GITHUB_WORKSPACE}\package\${Env:GIT_TVTEST}-${platform}"
-          $target_directory = "src\${platform}\${Env:BUILD_CONFIGURATION}"
+          $current = "$Env:GITHUB_WORKSPACE\package\$Env:GIT_TVTEST-$platform"
+          $target_directory = "src\$platform\$Env:BUILD_CONFIGURATION"
           New-Item "$current" -ItemType Directory
+          New-Item "$current\Plugins" -ItemType Directory
+          New-Item "$current\Themes" -ItemType Directory
           Copy-Item "${target_directory}\TVTest.exe", "${target_directory}\TVTest_Image.dll", "${target_directory}\TVTest.chm" -Destination "$current"
+          Copy-Item "doc" -Destination "$current"  -Recurse
+          Copy-Item "data\*.ini" -Destination "$current"
+          Copy-Item "data\Themes\*.httheme" -Destination "$current\Themes"
         }
 
     - name: Upload
       uses: actions/upload-artifact@v4
       with:
-        name: ${{env.GIT_TVTEST}}-${{env.GIT_TVTEST_SHA}}
+        name: ${{env.GIT_TVTEST}}-${{steps.set_tvtest_sha.outputs.GIT_TVTEST_SHA}}
         path: package\*
