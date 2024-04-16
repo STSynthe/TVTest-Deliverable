@@ -48,7 +48,7 @@ jobs:
         msbuild-architecture: x64
 
     - name: Set
-      run: echo "GIT_TVTEST_SHA=$(git log -1 --format=%H)" >> $GITHUB_ENV
+      run: echo "GIT_TVTEST_SHA=$(git log -1 --format=%H)" >> $GITHUB_STATE
 
     - name: Sets
       shell: cmd
