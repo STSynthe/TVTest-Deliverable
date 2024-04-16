@@ -14,6 +14,10 @@ env:
   # https://docs.github.com/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
   BUILD_CONFIGURATION: Release_MD
 
+  GIT_TVTEST: TVTest
+  GIT_TVTEST_REF: develop
+  GIT_TVTEST_PLATFORM: \'Win32\'\, \'x64\'
+
   # https://github.com/mstorsjo/fdk-aac
   GIT_FDK_AAC_REF: v2.0.3
 
@@ -23,6 +27,7 @@ permissions:
 defaults:
   run:
     shell: pwsh
+    working-directory: ${{env.RUNNER_WORKSPACE}}\${{env.GIT_TVTEST}}
 
 jobs:
   build:
@@ -33,14 +38,19 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v4
       with:
-        repository: DBCTRADO/TVTest
-        ref: develop
+        repository: DBCTRADO/${{env.GIT_TVTEST}}
+        ref: ${{env.GIT_TVTEST_REF}}
 
     - name: Add MSBuild to PATH
       uses: microsoft/setup-msbuild@v2
       with:
         vs-version: 17
         msbuild-architecture: x64
+
+    - name: Set
+      run: |
+        $Env:GIT_TVTEST_SHA = git show --format=%H --no-patch
+        Write-Host "GIT_TVTEST_SHA = ${Env:GIT_TVTEST_SHA}"
 
     - name: Sets
       shell: cmd
@@ -49,7 +59,6 @@ jobs:
         dir
 
     - name: Pre-Build
-      working-directory: ${{env.GITHUB_WORKSPACE}}
       run: |
         git submodule set-branch --branch develop src/LibISDB
         git submodule update --init --depth 1 src/LibISDB
@@ -61,10 +70,24 @@ jobs:
         foreach ($platform in ('x86', 'x64')) {msbuild -maxCpuCount -target:Build -property:Configuration=$Env:BUILD_CONFIGURATION -property:Platform=$platform src\LibISDB\Projects\LibISDB.sln}
 
     - name: Build
-      working-directory: ${{env.GITHUB_WORKSPACE}}
       # Add additional options to the MSBuild command line here (like platform or verbosity level).
       # See https://docs.microsoft.com/visualstudio/msbuild/msbuild-command-line-reference
       run: |
-        msbuild -maxCpuCount -target:Build -property:Configuration=$Env:BUILD_CONFIGURATION -property:Platform=Win32 src\TVTest.sln
+        foreach　($platform in (${{env.GIT_TVTEST_PLATFORM}})) {msbuild -maxCpuCount -target:Build -property:Configuration=$Env:BUILD_CONFIGURATION -property:Platform=$platform src\TVTest.sln}
 
-#    - name: Packing
+    # package.sh
+    - name: Package
+      run: |
+        New-Item "${Env:GITHUB_WORKSPACE}\package" -ItemType Directory
+        foreach　($platform in (${{env.GIT_TVTEST_PLATFORM}})) {
+          $current = "${Env:GITHUB_WORKSPACE}\package\${Env:GIT_TVTEST}-${platform}"
+          $target_directory = "src\${platform}\${Env:BUILD_CONFIGURATION}"
+          New-Item "$current" -ItemType Directory
+          Copy-Item "${target_directory}\TVTest.exe", "${target_directory}\TVTest_Image.dll", "${target_directory}\TVTest.chm" -Destination "$current"
+        }
+
+    - name: Upload
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{env.TVTest}}
+        path: package\*
