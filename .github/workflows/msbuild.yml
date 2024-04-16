@@ -26,8 +26,8 @@ permissions:
 
 defaults:
   run:
-    shell: pwsh
     working-directory: ${{env.RUNNER_WORKSPACE}}\${{env.GIT_TVTEST}}
+    shell: pwsh
 
 jobs:
   build:
