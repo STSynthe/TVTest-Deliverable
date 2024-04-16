@@ -49,7 +49,8 @@ jobs:
 
     - name: Set
       id: set_tvtest_sha
-      run: echo "GIT_TVTEST_SHA=$(git log -1 --format=%H)" >> "$GITHUB_OUTPUT"
+      #run: echo "GIT_TVTEST_SHA=$(git log -1 --format=%H)" >> "$GITHUB_OUTPUT"
+      run: Add-Content -Path $env:GITHUB_OUTPUT -Value "GIT_TVTEST_SHA=$(git log -1 --format=%H)"
 
     - name: Sets
       shell: cmd
@@ -57,6 +58,7 @@ jobs:
         set
         dir
         echo ${{steps.set_tvtest_sha.outputs.GIT_TVTEST_SHA}}
+        echo ${{env.GIT_TVTEST_SHA}}
 
     - name: Pre-Build
       run: |
