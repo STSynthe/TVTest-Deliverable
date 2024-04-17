@@ -13,8 +13,9 @@ env:
   # You can convert this to a build matrix if you need coverage of multiple configuration types.
   # https://docs.github.com/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
   BUILD_CONFIGURATION: Release_MD
+  BUILD_PLUGIN_CONFIGURATION: Release
 
-  GIT_TVTEST: TVTest
+  GIT_TVTEST_NAME: TVTest
   GIT_TVTEST_REF: develop
   GIT_TVTEST_PLATFORM: "'Win32', 'x64'"
 
@@ -26,7 +27,6 @@ permissions:
 
 defaults:
   run:
-    #working-directory: ${{env.RUNNER_WORKSPACE}}\${{env.GIT_TVTEST}}
     shell: pwsh
 
 jobs:
@@ -38,7 +38,7 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v4
       with:
-        repository: DBCTRADO/${{env.GIT_TVTEST}}
+        repository: DBCTRADO/${{env.GIT_TVTEST_NAME}}
         ref: ${{env.GIT_TVTEST_REF}}
 
     - name: Add MSBuild to PATH
@@ -47,18 +47,9 @@ jobs:
         vs-version: 17
         msbuild-architecture: x64
 
-    - name: Set
-      id: set_tvtest_sha
-      #run: echo "GIT_TVTEST_SHA=$(git log -1 --format=%H)" >> "$GITHUB_OUTPUT"
-      run: Add-Content -Path $env:GITHUB_OUTPUT -Value "GIT_TVTEST_SHA=$(git log -1 --format=%H)"
-
-    - name: Sets
-      shell: cmd
-      run: |
-        set
-        dir
-        echo ${{steps.set_tvtest_sha.outputs.GIT_TVTEST_SHA}}
-        echo ${{env.GIT_TVTEST_SHA}}
+    - name: Add Variable
+      id: add_vars
+      run: Add-Content -Path $Env:GITHUB_OUTPUT -Value "GIT_TVTEST_SHA=$(git log -1 --format=%H)"
 
     - name: Pre-Build
       run: |
@@ -69,32 +60,42 @@ jobs:
         Set-Location Thirdparty\fdk-aac
         git checkout $Env:GIT_FDK_AAC_REF
         Set-Location ..\..\..\..\
-        foreach ($platform in ('x86', 'x64')) {msbuild -maxCpuCount -target:Build -property:Configuration=$Env:BUILD_CONFIGURATION -property:Platform=$platform src\LibISDB\Projects\LibISDB.sln}
+        foreach ($TypePlatform in ('x86', 'x64')) {msbuild -maxCpuCount -target:Build -property:Configuration=$Env:BUILD_CONFIGURATION -property:Platform=$TypePlatform src\LibISDB\Projects\LibISDB.sln}
 
     - name: Build
       # Add additional options to the MSBuild command line here (like platform or verbosity level).
       # See https://docs.microsoft.com/visualstudio/msbuild/msbuild-command-line-reference
       run: |
-        foreach　($platform in (${{env.GIT_TVTEST_PLATFORM}})) {msbuild -maxCpuCount -target:Build -property:Configuration=$Env:BUILD_CONFIGURATION -property:Platform=$platform src\TVTest.sln}
+        foreach　($TypePlatform in (${{env.GIT_TVTEST_PLATFORM}})) {msbuild -maxCpuCount -target:Build -property:Configuration=$Env:BUILD_CONFIGURATION -property:Platform=$TypePlatform src\TVTest.sln && msbuild -maxCpuCount -target:Build -property:Configuration=$Env:BUILD_PLUGIN_CONFIGURATION -property:Platform=$TypePlatform sdk\Samples\Samples.sln}
 
     # package.sh
     - name: Package
       run: |
-        New-Item "$Env:GITHUB_WORKSPACE\package" -ItemType Directory
-        foreach　($platform in (${{env.GIT_TVTEST_PLATFORM}})) {
-          $current = "$Env:GITHUB_WORKSPACE\package\$Env:GIT_TVTEST-$platform"
-          $target_directory = "src\$platform\$Env:BUILD_CONFIGURATION"
-          New-Item "$current" -ItemType Directory
-          New-Item "$current\Plugins" -ItemType Directory
-          New-Item "$current\Themes" -ItemType Directory
-          Copy-Item "${target_directory}\TVTest.exe", "${target_directory}\TVTest_Image.dll", "${target_directory}\TVTest.chm" -Destination "$current"
-          Copy-Item "doc" -Destination "$current"  -Recurse
-          Copy-Item "data\*.ini" -Destination "$current"
-          Copy-Item "data\Themes\*.httheme" -Destination "$current\Themes"
+        $DirPackageRoot = "$Env:GITHUB_WORKSPACE\package"
+
+        New-Item "$DirPackageRoot" -ItemType Directory
+
+        foreach　($TypePlatform in (${{env.GIT_TVTEST_PLATFORM}})) {
+
+          $DirPlatform = "$DirPackageRoot\$Env:GIT_TVTEST_NAME-$TypePlatform"
+          $DirTarget = "$Env:GITHUB_WORKSPACE\src\$TypePlatform\$Env:BUILD_CONFIGURATION"
+
+          New-Item "$DirPlatform" -ItemType Directory
+          New-Item "$DirPlatform\Plugins" -ItemType Directory
+          New-Item "$DirPlatform\Themes" -ItemType Directory
+
+          Copy-Item "$DirTarget\TVTest.exe", "$DirTarget\TVTest_Image.dll", "$DirTarget\TVTest.chm" -Destination "$DirPlatform" -PassThru
+          Copy-Item "doc" -Destination "$DirPlatform" -Recurse -PassThru
+          Copy-Item "data\*.ini" -Destination "$DirPlatform" -PassThru
+          Copy-Item "data\Themes\*.httheme" -Destination "$DirPlatform\Themes" -PassThru
+          if ("x64" -ceq $TypePlatform) {Copy-Item "data\Data_x64\TVTest_Logo.bmp" -Destination "$DirPlatform" -PassThru} else {Copy-Item "data\TVTest_Logo.bmp" -Destination "$DirPlatform" -PassThru}
+
+          $DirTargetPlugins = "$Env:GITHUB_WORKSPACE\sdk\Samples\$TypePlatform\$Env:BUILD_PLUGIN_CONFIGURATION"
+          Copy-Item "$DirTargetPlugins\*.tvtp", "$DirTargetPlugins\*.dll" -Destination "$DirPlatform\Plugins" -PassThru
         }
 
     - name: Upload
       uses: actions/upload-artifact@v4
       with:
-        name: ${{env.GIT_TVTEST}}-${{steps.set_tvtest_sha.outputs.GIT_TVTEST_SHA}}
+        name: ${{env.GIT_TVTEST_NAME}}-${{steps.add_vars.outputs.GIT_TVTEST_SHA}}
         path: package\*
