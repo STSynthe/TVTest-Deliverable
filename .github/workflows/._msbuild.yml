@@ -43,5 +43,8 @@ jobs:
       env:
         GIT_TVTEST_PLATFORM: ${{ matrix.platform == 'x86' && 'Win32' || matrix.platform }}
       run: |
-        Write-Host $GIT_TVTEST_PLATFORM
-        
+        Write-Host $Env:GIT_TVTEST_PLATFORM
+
+    - name: Test2
+      run: |
+        Write-Host $Env:GIT_TVTEST_PLATFORM
