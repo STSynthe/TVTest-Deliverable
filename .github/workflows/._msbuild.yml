@@ -41,7 +41,7 @@ jobs:
     steps:
     - name: Test
       env:
-        GIT_TVTEST_PLATFORM: ${{ matrix.platform == "x86" && "Win32" || matrix.platform }}
+        GIT_TVTEST_PLATFORM: ${{ matrix.platform == 'x86' && 'Win32' || matrix.platform }}
       run: |
         Write-Host $GIT_TVTEST_PLATFORM
         
