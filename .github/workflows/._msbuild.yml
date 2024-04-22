@@ -38,6 +38,9 @@ jobs:
       matrix:
         platform: [x86, x64]
 
+    env:
+      GIT_TVTEST_PLATFORM: ${{ matrix.platform == 'x86' && 'Win32' || matrix.platform }}
+
     steps:
     - name: Test
       env:
