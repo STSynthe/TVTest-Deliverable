@@ -75,7 +75,7 @@ jobs:
       # See https://docs.microsoft.com/visualstudio/msbuild/msbuild-command-line-reference
       run: |
         msbuild -maxCpuCount -target:Build -property:Configuration=${{env.BUILD_CONFIGURATION}} -property:Platform=${{env.GIT_TVTEST_PLATFORM}} src\TVTest.sln
-        msbuild -maxCpuCount -target:Build -property:Configuration=${{env.BUILD_CONFIGURATION}} -property:Platform=${{env.GIT_TVTEST_PLATFORM}} sdk\Samples\Samples.sln
+        msbuild -maxCpuCount -target:Build -property:Configuration=${{env.BUILD_PLUGIN_CONFIGURATION}} -property:Platform=${{env.GIT_TVTEST_PLATFORM}} sdk\Samples\Samples.sln
 
     # package.sh
     - name: Package
