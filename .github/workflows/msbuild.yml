@@ -105,7 +105,7 @@ jobs:
     - name: Upload
       uses: actions/upload-artifact@v4
       env:
-        ARTIFACT_NAME: "${{env.GIT_TVTEST_NAME}}_v${{steps.variables.outputs.GIT_TVTEST_VERSION}}+${{steps.variables.outputs.GIT_TVTEST_SHA}}"
+        ARTIFACT_NAME: "${{env.GIT_TVTEST_NAME}}_v${{steps.variables.outputs.GIT_TVTEST_VERSION}}-${{matrix.platform}}+${{steps.variables.outputs.GIT_TVTEST_SHA}}"
       with:
         name: ${{env.ARTIFACT_NAME}}
         compression-level: 7
