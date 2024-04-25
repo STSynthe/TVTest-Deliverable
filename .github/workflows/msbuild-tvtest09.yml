@@ -1,0 +1,81 @@
+# This workflow uses actions that are not certified by GitHub.
+# They are provided by a third-party and are governed by
+# separate terms of service, privacy policy, and support
+# documentation.
+
+name: MSBuild TvTest v0.9.0
+
+on:
+  workflow_dispatch:
+
+env:
+  # Path to the solution file relative to the root of the project.
+  SOLUTION_FILE_PATH: .
+
+  # Configuration type to build.
+  # You can convert this to a build matrix if you need coverage of multiple configuration types.
+  # https://docs.github.com/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
+  BUILD_CONFIGURATION: Release
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: pwsh
+
+jobs:
+  build:
+    runs-on: windows-2019
+    timeout-minutes: 20
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        repository: DBCTRADO/TVTest
+        ref: 0.9.0
+        path: TVTest-master
+
+    - name: Add MSBuild to PATH
+      uses: microsoft/setup-msbuild@v2
+      with:
+        vs-version: 16
+
+    - name: set
+      shell: cmd
+      run: |
+        set
+        echo %cd%
+
+    - name: Fix patch
+      run: |
+        Set-Location src\DirectShowFilter\EVRCustomPresenter
+
+        $Encoding = "ascii"
+        $Path = "EVRPresenterBase.h"
+
+        $EVRPresenterBase = Get-Content -Path $Path -Encoding $Encoding
+
+        $EVRPresenterBase[17] = $EVRPresenterBase[17].Replace('evr_vista.lib', 'evr.lib')
+        $EVRPresenterBase[18] = $EVRPresenterBase[18].Replace('mf_vista.lib', 'mf.lib')
+        $EVRPresenterBase[19] = $EVRPresenterBase[19].Replace('mfplat_vista.lib', 'mfplat.lib')
+
+        Set-Content -Path $Path -Encoding $Encoding -Value $EVRPresenterBase
+
+        Set-Location ..\..\..\
+        git commit -a -m "Fix: Windows SDK library link https://learn.microsoft.com/ja-jp/windows/win32/medfound/media-foundation-headers-and-libraries#library-changes-in-windows-7"
+
+        7z a -tzip -mx=7 TVTest-src.zip TvTest
+
+    - name: Restore WinSDK Samples
+      run: |
+        Invoke-WebRequest -Uri "https://download.microsoft.com/download/A/6/A/A6AC035D-DA3F-4F0C-ADA4-37C8E5D34E3D/setup/WinSDKSamples/cab1.cab" -OutFile "$Env:RUNNER_TEMP\cab1.cab"
+        expand "$Env:RUNNER_TEMP\cab1.cab" -f:winsdk_samples_multimedia_directshow_baseclasses_* src\BaseClasses
+        Set-Location src\BaseClasses
+        Get-ChildItem winsdk_samples_multimedia_directshow_baseclasses_* | Rename-Item -NewName { $PSItem.Name -replace '^winsdk_samples_multimedia_directshow_baseclasses_(.+)_(.+)$', '$1.$2' }
+
+#    - name: Build
+#      working-directory: ${{env.GITHUB_WORKSPACE}}
+#      # Add additional options to the MSBuild command line here (like platform or verbosity level).
+#      # See https://docs.microsoft.com/visualstudio/msbuild/msbuild-command-line-reference
+#      run: msbuild /m /p:Configuration=${{env.BUILD_CONFIGURATION}} ${{env.SOLUTION_FILE_PATH}}
