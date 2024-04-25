@@ -32,14 +32,18 @@ jobs:
     timeout-minutes: 20
 
     env:
-      TVTEST_DIRECTORY: "${{GITHUB_WORKSPACE}}\\${{DEFAULT_TVTEST_DIRECTORY}}"
+      TVTEST_DIRECTORY: "${{github.workspace}}\\${{env.DEFAULT_TVTEST_DIRECTORY}}"
+
+    defaults:
+      run:
+        working-directory: ${{env.TVTEST_DIRECTORY}}
 
     steps:
     - uses: actions/checkout@v4
       with:
         repository: DBCTRADO/TVTest
         ref: 0.9.0
-        path: ${{TVTEST_DIRECTORY}}
+        path: ${{env.TVTEST_DIRECTORY}}
 
     - name: Add MSBuild to PATH
       uses: microsoft/setup-msbuild@v2
@@ -48,13 +52,13 @@ jobs:
 
     - name: set
       shell: cmd
-      working-directory: ${{TVTEST_DIRECTORY}}
+      #working-directory: ${{TVTEST_DIRECTORY}}
       run: |
         set
         echo %cd%
 
     - name: Fix patch
-      working-directory: ${{TVTEST_DIRECTORY}}
+      #working-directory: ${{TVTEST_DIRECTORY}}
       run: |
         Set-Location src\DirectShowFilter\EVRCustomPresenter
 
@@ -71,10 +75,10 @@ jobs:
 
         Set-Location ..\..\..\
 
-        7z a -tzip -mx=7 "$Env:GITHUB_WORKSPACE\TVTest-src.zip" "$Env:GITHUB_WORKSPACE\$Env:DEFAULTWORKING_DIRECTORY"
+        7z a -tzip -mx=7 "$Env:GITHUB_WORKSPACE\TVTest-src.zip" "$Env:TVTEST_DIRECTORY"
 
     - name: Restore WinSDK Samples
-      working-directory: ${{TVTEST_DIRECTORY}}
+      #working-directory: ${{TVTEST_DIRECTORY}}
       run: |
         Invoke-WebRequest -Uri "https://download.microsoft.com/download/A/6/A/A6AC035D-DA3F-4F0C-ADA4-37C8E5D34E3D/setup/WinSDKSamples/cab1.cab" -OutFile "$Env:RUNNER_TEMP\cab1.cab"
         expand "$Env:RUNNER_TEMP\cab1.cab" -f:winsdk_samples_multimedia_directshow_baseclasses_* src\BaseClasses
