@@ -17,13 +17,15 @@ env:
   # https://docs.github.com/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
   BUILD_CONFIGURATION: Release
 
+  DEFAULTWORKING_DIRECTORY: "${{GITHUB_WORKSPACE}}\\TVTest-master"
+
 permissions:
   contents: read
 
 defaults:
   run:
     shell: pwsh
-    working-directory: .\TVTest-master
+    working-directory: ${{DEFAULTWORKING_DIRECTORY}}
 
 jobs:
   build:
@@ -35,7 +37,7 @@ jobs:
       with:
         repository: DBCTRADO/TVTest
         ref: 0.9.0
-        path: TVTest-master
+        path: ${{DEFAULTWORKING_DIRECTORY}}
 
     - name: Add MSBuild to PATH
       uses: microsoft/setup-msbuild@v2
@@ -50,7 +52,7 @@ jobs:
 
     - name: Fix patch
       run: |
-        Set-Location src\DirectShowFilter\EVRCustomPresenter
+        Set-Location "$Env:DEFAULTWORKING_DIRECTORY\src\DirectShowFilter\EVRCustomPresenter"
 
         $Encoding = "ascii"
         $Path = "EVRPresenterBase.h"
@@ -66,7 +68,7 @@ jobs:
         Set-Location ..\..\..\
         git commit -a -m "Fix: Windows SDK library link https://learn.microsoft.com/ja-jp/windows/win32/medfound/media-foundation-headers-and-libraries#library-changes-in-windows-7"
 
-        7z a -tzip -mx=7 TVTest-src.zip TvTest
+        7z a -tzip -mx=7 "$Env:GITHUB_WORKSPACE\TVTest-src.zip" "$Env:DEFAULTWORKING_DIRECTORY"
 
     - name: Restore WinSDK Samples
       run: |
