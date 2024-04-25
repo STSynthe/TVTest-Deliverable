@@ -18,6 +18,7 @@ env:
   BUILD_CONFIGURATION: Release
 
   DEFAULT_TVTEST_DIRECTORY: TVTest-master
+  TVTEST_DIRECTORY: "${{github.workspace}}\\${{env.DEFAULT_TVTEST_DIRECTORY}}"
 
 permissions:
   contents: read
@@ -30,9 +31,6 @@ jobs:
   build:
     runs-on: windows-2019
     timeout-minutes: 20
-
-    env:
-      TVTEST_DIRECTORY: "${{github.workspace}}\\${{env.DEFAULT_TVTEST_DIRECTORY}}"
 
     defaults:
       run:
