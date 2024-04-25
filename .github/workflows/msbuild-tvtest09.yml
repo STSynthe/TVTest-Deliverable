@@ -18,7 +18,7 @@ env:
   BUILD_CONFIGURATION: Release
 
   DEFAULT_TVTEST_DIRECTORY: TVTest-master
-  TVTEST_DIRECTORY: "${{github.workspace}}\\${{env.DEFAULT_TVTEST_DIRECTORY}}"
+  TVTEST_DIRECTORY: "${{github.workspace}}\\TVTest-master"
 
 permissions:
   contents: read
