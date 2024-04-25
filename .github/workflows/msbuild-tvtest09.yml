@@ -17,7 +17,7 @@ env:
   # https://docs.github.com/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
   BUILD_CONFIGURATION: Release
 
-  DEFAULTWORKING_DIRECTORY: "${{GITHUB_WORKSPACE}}\\TVTest-master"
+  DEFAULT_TVTEST_DIRECTORY: TVTest-master
 
 permissions:
   contents: read
@@ -25,7 +25,6 @@ permissions:
 defaults:
   run:
     shell: pwsh
-    working-directory: ${{DEFAULTWORKING_DIRECTORY}}
 
 jobs:
   build:
@@ -37,7 +36,7 @@ jobs:
       with:
         repository: DBCTRADO/TVTest
         ref: 0.9.0
-        path: ${{DEFAULTWORKING_DIRECTORY}}
+        path: ${{DEFAULT_TVTEST_DIRECTORY}}
 
     - name: Add MSBuild to PATH
       uses: microsoft/setup-msbuild@v2
@@ -46,13 +45,15 @@ jobs:
 
     - name: set
       shell: cmd
+      working-directory: ${{GITHUB_WORKSPACE}}\${{DEFAULT_TVTEST_DIRECTORY}}
       run: |
         set
         echo %cd%
 
     - name: Fix patch
+      working-directory: ${{GITHUB_WORKSPACE}}\${{DEFAULT_TVTEST_DIRECTORY}}
       run: |
-        Set-Location "$Env:DEFAULTWORKING_DIRECTORY\src\DirectShowFilter\EVRCustomPresenter"
+        Set-Location src\DirectShowFilter\EVRCustomPresenter
 
         $Encoding = "ascii"
         $Path = "EVRPresenterBase.h"
@@ -66,11 +67,11 @@ jobs:
         Set-Content -Path $Path -Encoding $Encoding -Value $EVRPresenterBase
 
         Set-Location ..\..\..\
-        git commit -a -m "Fix: Windows SDK library link https://learn.microsoft.com/ja-jp/windows/win32/medfound/media-foundation-headers-and-libraries#library-changes-in-windows-7"
 
-        7z a -tzip -mx=7 "$Env:GITHUB_WORKSPACE\TVTest-src.zip" "$Env:DEFAULTWORKING_DIRECTORY"
+        7z a -tzip -mx=7 "$Env:GITHUB_WORKSPACE\TVTest-src.zip" "$Env:GITHUB_WORKSPACE\$Env:DEFAULTWORKING_DIRECTORY"
 
     - name: Restore WinSDK Samples
+      working-directory: ${{GITHUB_WORKSPACE}}\${{DEFAULT_TVTEST_DIRECTORY}}
       run: |
         Invoke-WebRequest -Uri "https://download.microsoft.com/download/A/6/A/A6AC035D-DA3F-4F0C-ADA4-37C8E5D34E3D/setup/WinSDKSamples/cab1.cab" -OutFile "$Env:RUNNER_TEMP\cab1.cab"
         expand "$Env:RUNNER_TEMP\cab1.cab" -f:winsdk_samples_multimedia_directshow_baseclasses_* src\BaseClasses
