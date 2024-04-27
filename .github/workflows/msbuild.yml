@@ -3,7 +3,7 @@
 # separate terms of service, privacy policy, and support
 # documentation.
 
-name: MSBuild
+name: MSBuild for TvTest(latest)
 
 on:
   workflow_dispatch:
@@ -15,11 +15,11 @@ env:
   BUILD_CONFIGURATION: Release_MD
   BUILD_PLUGIN_CONFIGURATION: Release
 
-  GIT_TVTEST_NAME: TVTest
-  GIT_TVTEST_REF: develop
+  TVTEST_NAME: TVTest
+  TVTEST_REF: develop
 
   # https://github.com/mstorsjo/fdk-aac
-  GIT_FDK_AAC_REF: v2.0.3
+  FDKAAC_REF: v2.0.3
 
 permissions:
   contents: read
@@ -31,21 +31,21 @@ defaults:
 jobs:
   build:
     runs-on: windows-2022
-    timeout-minutes: 20
+    timeout-minutes: 15
 
     strategy:
       matrix:
         platform: [x86, x64]
 
     env:
-      GIT_TVTEST_PLATFORM: ${{ matrix.platform == 'x86' && 'Win32' || matrix.platform }}
+      TVTEST_PLATFORM: ${{ matrix.platform == 'x86' && 'Win32' || matrix.platform }}
 
     steps:
     - name: Checkout
       uses: actions/checkout@v4
       with:
-        repository: DBCTRADO/${{env.GIT_TVTEST_NAME}}
-        ref: ${{env.GIT_TVTEST_REF}}
+        repository: DBCTRADO/TVTest
+        ref: ${{env.TVTEST_REF}}
 
     - name: Add MSBuild to PATH
       uses: microsoft/setup-msbuild@v2
@@ -56,8 +56,8 @@ jobs:
     - name: Add Variable
       id: variables
       run: |
-        Add-Content -Path $Env:GITHUB_OUTPUT -Value "GIT_TVTEST_SHA=$(git log -1 --format=%H)"
-        Add-Content -Path $Env:GITHUB_OUTPUT -Value "GIT_TVTEST_VERSION=$((Select-String -Path src\TVTestVersion.h -Raw -Pattern "#define VERSION_TEXT_A") -replace '[^"]+"([0-9\.]+)"', '$1')"
+        Add-Content -Path "${{env.GITHUB_OUTPUT}}" -Value "GIT_TVTEST_SHA=$(git log -1 --format=%H)"
+        Add-Content -Path "${{env.GITHUB_OUTPUT}}" -Value "GIT_TVTEST_VERSION=$((Select-String -Path src\TVTestVersion.h -Raw -Pattern "#define VERSION_TEXT_A") -replace '[^"]+"([0-9\.]+)"', '$1')"
 
     - name: Pre-Build
       run: |
@@ -66,7 +66,7 @@ jobs:
         Set-Location src\LibISDB
         git submodule update --init Thirdparty/fdk-aac
         Set-Location Thirdparty\fdk-aac
-        git checkout ${{env.GIT_FDK_AAC_REF}}
+        git checkout ${{env.FDKAAC_REF}}
         Set-Location ..\..\..\..\
         msbuild -maxCpuCount -target:Build -property:Configuration=${{env.BUILD_CONFIGURATION}} -property:Platform=${{matrix.platform}} src\LibISDB\Projects\LibISDB.sln
 
@@ -74,20 +74,20 @@ jobs:
       # Add additional options to the MSBuild command line here (like platform or verbosity level).
       # See https://docs.microsoft.com/visualstudio/msbuild/msbuild-command-line-reference
       run: |
-        msbuild -maxCpuCount -target:Build -property:Configuration=${{env.BUILD_CONFIGURATION}} -property:Platform=${{env.GIT_TVTEST_PLATFORM}} src\TVTest.sln
-        msbuild -maxCpuCount -target:Build -property:Configuration=${{env.BUILD_PLUGIN_CONFIGURATION}} -property:Platform=${{env.GIT_TVTEST_PLATFORM}} sdk\Samples\Samples.sln
+        msbuild -maxCpuCount -target:Build -property:Configuration=${{env.BUILD_CONFIGURATION}} -property:Platform=${{env.TVTEST_PLATFORM}} src\TVTest.sln
+        msbuild -maxCpuCount -target:Build -property:Configuration=${{env.BUILD_PLUGIN_CONFIGURATION}} -property:Platform=${{env.TVTEST_PLATFORM}} sdk\Samples\Samples.sln
 
     # package.sh
     - name: Package
       run: |
-        $DirPackageRoot = "$Env:GITHUB_WORKSPACE\package"
+        $DirPackageRoot = "${{github.workspace}}\package"
 
         New-Item "$DirPackageRoot" -ItemType Directory
 
-        $TypePlatform = "${{env.GIT_TVTEST_PLATFORM}}"
+        $TypePlatform = "${{env.TVTEST_PLATFORM}}"
 
-        $DirPlatform = "$DirPackageRoot\$Env:GIT_TVTEST_NAME-$TypePlatform"
-        $DirTarget = "$Env:GITHUB_WORKSPACE\src\$TypePlatform\$Env:BUILD_CONFIGURATION"
+        $DirPlatform = "$DirPackageRoot\$Env:TVTEST_NAME-$TypePlatform"
+        $DirTarget = "${{github.workspace}}\src\$TypePlatform\$Env:BUILD_CONFIGURATION"
 
         New-Item "$DirPlatform" -ItemType Directory
         New-Item "$DirPlatform\Plugins" -ItemType Directory
@@ -97,15 +97,17 @@ jobs:
         Copy-Item "doc" -Destination "$DirPlatform" -Recurse -PassThru
         Copy-Item "data\*.ini" -Destination "$DirPlatform" -PassThru
         Copy-Item "data\Themes\*.httheme" -Destination "$DirPlatform\Themes" -PassThru
-        if ("x64" -ceq $TypePlatform) {Copy-Item "data\Data_x64\TVTest_Logo.bmp" -Destination "$DirPlatform" -PassThru} else {Copy-Item "data\TVTest_Logo.bmp" -Destination "$DirPlatform" -PassThru}
+        $PathTVTestLogo = "data\TVTest_Logo.bmp"
+        if ("x64" -ceq $TypePlatform) {$PathTVTestLogo = "data\Data_x64\TVTest_Logo.bmp"}
+        Copy-Item "$PathTVTestLogo" -Destination "$DirPlatform" -PassThru
 
-        $DirTargetPlugins = "$Env:GITHUB_WORKSPACE\sdk\Samples\$TypePlatform\$Env:BUILD_PLUGIN_CONFIGURATION"
+        $DirTargetPlugins = "${{github.workspace}}\sdk\Samples\$TypePlatform\$Env:BUILD_PLUGIN_CONFIGURATION"
         Copy-Item "$DirTargetPlugins\*.tvtp", "$DirTargetPlugins\*.dll" -Destination "$DirPlatform\Plugins" -PassThru
 
     - name: Upload
       uses: actions/upload-artifact@v4
       env:
-        ARTIFACT_NAME: "${{env.GIT_TVTEST_NAME}}_v${{steps.variables.outputs.GIT_TVTEST_VERSION}}-${{matrix.platform}}+${{steps.variables.outputs.GIT_TVTEST_SHA}}"
+        ARTIFACT_NAME: "${{env.TVTEST_NAME}}_v${{steps.variables.outputs.GIT_TVTEST_VERSION}}-${{matrix.platform}}+${{steps.variables.outputs.GIT_TVTEST_SHA}}"
       with:
         name: ${{env.ARTIFACT_NAME}}
         compression-level: 7
