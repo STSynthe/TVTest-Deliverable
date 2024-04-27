@@ -3,21 +3,20 @@
 # separate terms of service, privacy policy, and support
 # documentation.
 
-name: MSBuild TvTest v0.9.0
+name: MSBuild for TvTest(v0.9.0)
 
 on:
   workflow_dispatch:
 
 env:
-  # Path to the solution file relative to the root of the project.
-  SOLUTION_FILE_PATH: .
-
   # Configuration type to build.
   # You can convert this to a build matrix if you need coverage of multiple configuration types.
   # https://docs.github.com/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
-  BUILD_CONFIGURATION: Release
+  BUILD_CONFIGURATION: Release_MD
+  BUILD_PLUGIN_CONFIGURATION: Release
 
-  DEFAULT_TVTEST_DIRECTORY: TVTest-master
+  TVTEST_NAME: TVTest
+  TVTEST_REF: 0.9.0
   TVTEST_DIRECTORY: "${{github.workspace}}\\TVTest-master"
 
 permissions:
@@ -30,7 +29,10 @@ defaults:
 jobs:
   build:
     runs-on: windows-2019
-    timeout-minutes: 20
+    timeout-minutes: 15
+
+    env:
+      TVTEST_PLATFORM: Win32
 
     defaults:
       run:
@@ -40,23 +42,22 @@ jobs:
     - uses: actions/checkout@v4
       with:
         repository: DBCTRADO/TVTest
-        ref: 0.9.0
+        ref: ${{env.TVTEST_REF}}
         path: ${{env.TVTEST_DIRECTORY}}
 
     - name: Add MSBuild to PATH
       uses: microsoft/setup-msbuild@v2
       with:
         vs-version: 16
+        msbuild-architecture: x64
 
     - name: set
       shell: cmd
-      #working-directory: ${{TVTEST_DIRECTORY}}
       run: |
         set
         echo %cd%
 
     - name: Fix patch
-      #working-directory: ${{TVTEST_DIRECTORY}}
       run: |
         Set-Location src\DirectShowFilter\EVRCustomPresenter
 
@@ -73,18 +74,58 @@ jobs:
 
         Set-Location ..\..\..\
 
-        7z a -tzip -mx=7 "$Env:GITHUB_WORKSPACE\TVTest-src.zip" "$Env:TVTEST_DIRECTORY"
+        7z a -tzip -mx=7 "${{github.workspace}}\${{env.TVTEST_NAME}}-src.zip" "$Env:TVTEST_DIRECTORY"
 
     - name: Restore WinSDK Samples
-      #working-directory: ${{TVTEST_DIRECTORY}}
       run: |
-        Invoke-WebRequest -Uri "https://download.microsoft.com/download/A/6/A/A6AC035D-DA3F-4F0C-ADA4-37C8E5D34E3D/setup/WinSDKSamples/cab1.cab" -OutFile "$Env:RUNNER_TEMP\cab1.cab"
-        expand "$Env:RUNNER_TEMP\cab1.cab" -f:winsdk_samples_multimedia_directshow_baseclasses_* src\BaseClasses
-        Set-Location src\BaseClasses
+        $OutCabFile = "${{runner.temp}}\cab1.cab"
+        $ExpandDirectory = "src\BaseClasses"
+
+        Invoke-WebRequest -Uri "https://download.microsoft.com/download/A/6/A/A6AC035D-DA3F-4F0C-ADA4-37C8E5D34E3D/setup/WinSDKSamples/cab1.cab" -OutFile "$OutCabFile"
+        expand "$OutCabFile" -f:winsdk_samples_multimedia_directshow_baseclasses_* "$ExpandDirectory"
+        Set-Location "$ExpandDirectory"
         Get-ChildItem winsdk_samples_multimedia_directshow_baseclasses_* | Rename-Item -NewName { $PSItem.Name -replace '^winsdk_samples_multimedia_directshow_baseclasses_(.+)_(.+)$', '$1.$2' }
 
-#    - name: Build
-#      working-directory: ${{env.GITHUB_WORKSPACE}}
-#      # Add additional options to the MSBuild command line here (like platform or verbosity level).
-#      # See https://docs.microsoft.com/visualstudio/msbuild/msbuild-command-line-reference
-#      run: msbuild /m /p:Configuration=${{env.BUILD_CONFIGURATION}} ${{env.SOLUTION_FILE_PATH}}
+    - name: Build
+      # Add additional options to the MSBuild command line here (like platform or verbosity level).
+      # See https://docs.microsoft.com/visualstudio/msbuild/msbuild-command-line-reference
+      run: |
+        msbuild -maxCpuCount -target:Build -property:Configuration=${{env.BUILD_CONFIGURATION}} -property:Platform=${{env.TVTEST_PLATFORM}} -property:WindowsTargetPlatformVersion=10.0.22621.0 /detailedsummary:True "src\TVTest_All.VS2013.sln"
+        msbuild -maxCpuCount -target:Build -property:Configuration=${{env.BUILD_PLUGIN_CONFIGURATION}} -property:Platform=${{env.TVTEST_PLATFORM}} -property:WindowsTargetPlatformVersion=10.0.22621.0 "sdk\Samples\Samples.VS2013.sln"
+
+    # package.sh
+    - name: Package
+      run: |
+        $DirPackageRoot = "${{github.workspace}}\package"
+
+        New-Item "$DirPackageRoot" -ItemType Directory
+
+        $TypePlatform = "${{env.TVTEST_PLATFORM}}"
+
+        $DirPlatform = "$DirPackageRoot\$Env:TVTEST_NAME-$TypePlatform"
+        $DirTarget = "${{github.workspace}}\src\$TypePlatform\$Env:BUILD_CONFIGURATION"
+
+        New-Item "$DirPlatform" -ItemType Directory
+        New-Item "$DirPlatform\Plugins" -ItemType Directory
+        New-Item "$DirPlatform\Themes" -ItemType Directory
+
+        Copy-Item "$DirTarget\TVTest.exe", "$DirTarget\TVTest_Image.dll", "data\TVTest.chm" -Destination "$DirPlatform" -PassThru
+        Copy-Item "doc" -Destination "$DirPlatform" -Recurse -PassThru
+        Copy-Item "data\*.ini" -Destination "$DirPlatform" -PassThru
+        Copy-Item "data\Themes\*.httheme" -Destination "$DirPlatform\Themes" -PassThru
+        $PathTVTestLogo = "data\TVTest_Logo.bmp"
+        Copy-Item "$PathTVTestLogo" -Destination "$DirPlatform" -PassThru
+
+        $DirTargetPlugins = "${{github.workspace}}\sdk\Samples\$TypePlatform\$Env:BUILD_PLUGIN_CONFIGURATION"
+        Copy-Item "$DirTargetPlugins\*.tvtp", "$DirTargetPlugins\*.dll" -Destination "$DirPlatform\Plugins" -PassThru
+
+    - name: Upload
+      uses: actions/upload-artifact@v4
+      env:
+        ARTIFACT_NAME: "${{env.TVTEST_NAME}}_v${{env.TVTEST_REF}}-${{env.TVTEST_PLATFORM}}"
+      with:
+        name: ${{env.ARTIFACT_NAME}}
+        compression-level: 7
+        path: |
+          ${{github.workspace}}\${{env.TVTEST_NAME}}-src.zip
+          ${{github.workspace}}\package\*
