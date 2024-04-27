@@ -89,9 +89,12 @@ jobs:
     - name: Build
       # Add additional options to the MSBuild command line here (like platform or verbosity level).
       # See https://docs.microsoft.com/visualstudio/msbuild/msbuild-command-line-reference
+      env:
+        PLATFORM_TOOLSET: "v142"
+        WINDOWS_TARGET_PLATFORM_VERSION: "10.0.22621.0"
       run: |
-        msbuild -maxCpuCount -target:Build -property:Configuration=${{env.BUILD_CONFIGURATION}} -property:Platform=${{env.TVTEST_PLATFORM}} -property:PlatformToolset=v142 -property:TargetFrameworkVersion=v4.6.2 -property:WindowsTargetPlatformVersion=10.0.22621.0 /detailedsummary:True "src\TVTest_All.VS2013.sln"
-        msbuild -maxCpuCount -target:Build -property:Configuration=${{env.BUILD_PLUGIN_CONFIGURATION}} -property:Platform=${{env.TVTEST_PLATFORM}} -property:PlatformToolset=v142 -property:TargetFrameworkVersion=v4.6.2 -property:WindowsTargetPlatformVersion=10.0.22621.0 "sdk\Samples\Samples.VS2013.sln"
+        msbuild -maxCpuCount -target:Build -property:Configuration=${{env.BUILD_CONFIGURATION}} -property:Platform=${{env.TVTEST_PLATFORM}} -property:PlatformToolset=${{env.PLATFORM_TOOLSET}} -property:TargetFrameworkVersion=v4.6.2 -property:WindowsTargetPlatformVersion=${{WINDOWS_TARGET_PLATFORM_VERSION}} /detailedsummary:True "src\TVTest_All.VS2013.sln"
+        msbuild -maxCpuCount -target:Build -property:Configuration=${{env.BUILD_PLUGIN_CONFIGURATION}} -property:Platform=${{env.TVTEST_PLATFORM}} -property:PlatformToolset=${{env.PLATFORM_TOOLSET}} -property:TargetFrameworkVersion=v4.6.2 -property:WindowsTargetPlatformVersion=${{WINDOWS_TARGET_PLATFORM_VERSION}} "sdk\Samples\Samples.VS2013.sln"
 
     # package.sh
     - name: Package
