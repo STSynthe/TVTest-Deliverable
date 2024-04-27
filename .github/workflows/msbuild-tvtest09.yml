@@ -93,6 +93,7 @@ jobs:
       # See https://docs.microsoft.com/visualstudio/msbuild/msbuild-command-line-reference
       run: |
         chcp 932
+        $Env:LANGDIR = "JA"
         msbuild -maxCpuCount -target:Build -property:Configuration=${{env.BUILD_CONFIGURATION}} -property:Platform=${{env.TVTEST_PLATFORM}} -property:PlatformToolset=${{env.PLATFORM_TOOLSET}} -property:TargetFrameworkVersion=v4.6.2 -property:WindowsTargetPlatformVersion=${{env.WINDOWS_TARGET_PLATFORM_VERSION}} -property:AdditionalOptions="/source-charset:Shift_JIS %(AdditionalOptions)" /detailedsummary:True "src\TVTest_All.VS2013.sln"
 
     - name: Plugin Build
