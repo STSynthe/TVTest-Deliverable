@@ -93,9 +93,11 @@ jobs:
       # See https://docs.microsoft.com/visualstudio/msbuild/msbuild-command-line-reference
       env:
         CL: "/source-charset:Shift_JIS"
+      shell: cmd
       run: |
-        chcp 932
-        msbuild -maxCpuCount -target:Build -property:Configuration=${{env.BUILD_CONFIGURATION}} -property:Platform=${{env.TVTEST_PLATFORM}} -property:PlatformToolset=${{env.PLATFORM_TOOLSET}} -property:TargetFrameworkVersion=v4.6.2 -property:WindowsTargetPlatformVersion=${{env.WINDOWS_TARGET_PLATFORM_VERSION}} -property:CodePage=932 -detailedsummary:True "src\TVTest_All.VS2013.sln"
+        chcp 932 && cmd
+        msbuild -maxCpuCount -target:Build -property:Configuration=${{env.BUILD_CONFIGURATION}} -property:Platform=${{env.TVTEST_PLATFORM}} -property:PlatformToolset=${{env.PLATFORM_TOOLSET}} -property:TargetFrameworkVersion=v4.6.2 -property:WindowsTargetPlatformVersion=${{env.WINDOWS_TARGET_PLATFORM_VERSION}} -property:CodePage=932 -property:Encoding=Shift-JIS -detailedsummary:True "src\TVTest_All.VS2013.sln"
+        exit
 
     - name: Plugin Build
       run: msbuild -maxCpuCount -target:Build -property:Configuration=${{env.BUILD_PLUGIN_CONFIGURATION}} -property:Platform=${{env.TVTEST_PLATFORM}} -property:PlatformToolset=${{env.PLATFORM_TOOLSET}} -property:TargetFrameworkVersion=v4.6.2 -property:WindowsTargetPlatformVersion=${{env.WINDOWS_TARGET_PLATFORM_VERSION}} -property:CodePage=932 "sdk\Samples\Samples.VS2013.sln"
