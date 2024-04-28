@@ -96,7 +96,7 @@ jobs:
       shell: cmd
       run: |
         chcp 932
-        call "%VS140COMNTOOLS%\VsMSBuildCmd.bat"
+        call "%VS140COMNTOOLS%VsMSBuildCmd.bat"
         msbuild -maxCpuCount -target:Build -property:Configuration=${{env.BUILD_CONFIGURATION}} -property:Platform=${{env.TVTEST_PLATFORM}} -property:PlatformToolset=${{env.PLATFORM_TOOLSET}} -property:TargetFrameworkVersion=v4.6.2 -property:WindowsTargetPlatformVersion=${{env.WINDOWS_TARGET_PLATFORM_VERSION}} -property:CodePage=932 -property:Encoding=Shift-JIS -detailedsummary:True "src\TVTest_All.VS2013.sln"
         exit
 
