@@ -35,6 +35,7 @@ jobs:
       TVTEST_PLATFORM: Win32
       PLATFORM_TOOLSET: v142
       WINDOWS_TARGET_PLATFORM_VERSION: "10.0.22621.0"
+      CL: "/source-charset:Shift_JIS /execution-charset:Shift_JIS"
 
     defaults:
       run:
@@ -53,12 +54,6 @@ jobs:
         vs-version: 16
         msbuild-architecture: x64
 
-    - name: set
-      shell: cmd
-      run: |
-        set
-        echo %cd%
-
     - name: Fix patch
       run: |
         Set-Location src\DirectShowFilter\EVRCustomPresenter
@@ -74,9 +69,12 @@ jobs:
 
         Set-Content -Path $Path -Encoding $Encoding -Value $EVRPresenterBase
 
-        Set-Location ..\..\..\
-
-        7z a -tzip -mx=7 "${{github.workspace}}\${{env.TVTEST_NAME}}-src.zip" "$Env:TVTEST_DIRECTORY"
+    - name: Upload source
+      uses: actions/upload-artifact@v4
+      with:
+        name: "${{env.TVTEST_NAME}}_v${{env.TVTEST_REF}}-src"
+        compression-level: 7
+        path: ${{env.TVTEST_DIRECTORY}}\*
 
     - name: Restore WinSDK Samples
       run: |
@@ -91,14 +89,10 @@ jobs:
     - name: Build
       # Add additional options to the MSBuild command line here (like platform or verbosity level).
       # See https://docs.microsoft.com/visualstudio/msbuild/msbuild-command-line-reference
-      env:
-        CL: /source-charset:Shift_JIS
       shell: cmd
       run: chcp 932 > nul && msbuild -maxCpuCount -target:Build -property:Configuration=${{env.BUILD_CONFIGURATION}} -property:Platform=${{env.TVTEST_PLATFORM}} -property:PlatformToolset=${{env.PLATFORM_TOOLSET}} -property:TargetFrameworkVersion=v4.6.2 -property:WindowsTargetPlatformVersion=${{env.WINDOWS_TARGET_PLATFORM_VERSION}} -detailedsummary:True "src\TVTest_All.VS2013.sln"
 
     - name: Plugin Build
-      env:
-        CL: /source-charset:Shift_JIS
       shell: cmd
       run: chcp 932 > nul && msbuild -maxCpuCount -target:Build -property:Configuration=${{env.BUILD_PLUGIN_CONFIGURATION}} -property:Platform=${{env.TVTEST_PLATFORM}} -property:PlatformToolset=${{env.PLATFORM_TOOLSET}} -property:TargetFrameworkVersion=v4.6.2 -property:WindowsTargetPlatformVersion=${{env.WINDOWS_TARGET_PLATFORM_VERSION}} -detailedsummary:True "sdk\Samples\Samples.VS2013.sln"
 
@@ -112,13 +106,13 @@ jobs:
         $TypePlatform = "${{env.TVTEST_PLATFORM}}"
 
         $PackagePlatform = "$PackageRoot\${{env.TVTEST_NAME}}-$TypePlatform"
-        $Target = "src\$TypePlatform"
+        $Target = "src\$TypePlatform\${{env.BUILD_CONFIGURATION}}"
 
         New-Item "$PackagePlatform" -ItemType Directory
         New-Item "$PackagePlatform\Plugins" -ItemType Directory
         New-Item "$PackagePlatform\Themes" -ItemType Directory
 
-        Copy-Item "$Target\${{env.BUILD_CONFIGURATION}}\TVTest.exe", "$Target\${{env.BUILD_CONFIGURATION}}\TVTest_Image.dll", "data\TVTest.chm" -Destination "$PackagePlatform" -PassThru
+        Copy-Item "$Target\TVTest.exe", "$Target\TVTest_Image.dll", "data\TVTest.chm" -Destination "$PackagePlatform" -PassThru
         Copy-Item "doc" -Destination "$PackagePlatform" -Recurse -PassThru
         Copy-Item "data\*.ini" -Destination "$PackagePlatform" -PassThru
         Copy-Item "data\Themes\*.httheme" -Destination "$PackagePlatform\Themes" -PassThru
@@ -130,11 +124,7 @@ jobs:
 
     - name: Upload
       uses: actions/upload-artifact@v4
-      env:
-        ARTIFACT_NAME: "${{env.TVTEST_NAME}}_v${{env.TVTEST_REF}}-${{env.TVTEST_PLATFORM}}"
       with:
-        name: ${{env.ARTIFACT_NAME}}
+        name: "${{env.TVTEST_NAME}}_v${{env.TVTEST_REF}}-${{env.TVTEST_PLATFORM}}"
         compression-level: 7
-        path: |
-          ${{github.workspace}}\${{env.TVTEST_NAME}}-src.zip
-          ${{github.workspace}}\package\*
+        path: ${{github.workspace}}\package\*
