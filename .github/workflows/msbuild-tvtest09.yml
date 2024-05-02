@@ -34,7 +34,7 @@ jobs:
     env:
       TVTEST_PLATFORM: Win32
       PLATFORM_TOOLSET: v142
-      WINDOWS_TARGET_PLATFORM_VERSION: "10.0.22621.0"
+      WINDOWS_TARGET_PLATFORM_VERSION: "10.0.20348.0" # Windows 10 SDK Version 2104 
       CL: "/source-charset:Shift_JIS /execution-charset:Shift_JIS"
 
     defaults:
