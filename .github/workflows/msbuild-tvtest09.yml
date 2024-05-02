@@ -94,13 +94,13 @@ jobs:
       env:
         CL: /source-charset:Shift_JIS
       shell: cmd
-      run: chcp 65001 > nul && msbuild -maxCpuCount -target:Build -property:Configuration=${{env.BUILD_CONFIGURATION}} -property:Platform=${{env.TVTEST_PLATFORM}} -property:PlatformToolset=${{env.PLATFORM_TOOLSET}} -property:TargetFrameworkVersion=v4.6.2 -property:WindowsTargetPlatformVersion=${{env.WINDOWS_TARGET_PLATFORM_VERSION}} -detailedsummary:True "src\TVTest_All.VS2013.sln"
+      run: chcp 932 > nul && msbuild -maxCpuCount -target:Build -property:Configuration=${{env.BUILD_CONFIGURATION}} -property:Platform=${{env.TVTEST_PLATFORM}} -property:PlatformToolset=${{env.PLATFORM_TOOLSET}} -property:TargetFrameworkVersion=v4.6.2 -property:WindowsTargetPlatformVersion=${{env.WINDOWS_TARGET_PLATFORM_VERSION}} -detailedsummary:True "src\TVTest_All.VS2013.sln"
 
     - name: Plugin Build
       env:
         CL: /source-charset:Shift_JIS
       shell: cmd
-      run: chcp 65001 > nul && msbuild -maxCpuCount -target:Build -property:Configuration=${{env.BUILD_PLUGIN_CONFIGURATION}} -property:Platform=${{env.TVTEST_PLATFORM}} -property:PlatformToolset=${{env.PLATFORM_TOOLSET}} -property:TargetFrameworkVersion=v4.6.2 -property:WindowsTargetPlatformVersion=${{env.WINDOWS_TARGET_PLATFORM_VERSION}} -detailedsummary:True "sdk\Samples\Samples.VS2013.sln"
+      run: chcp 932 > nul && msbuild -maxCpuCount -target:Build -property:Configuration=${{env.BUILD_PLUGIN_CONFIGURATION}} -property:Platform=${{env.TVTEST_PLATFORM}} -property:PlatformToolset=${{env.PLATFORM_TOOLSET}} -property:TargetFrameworkVersion=v4.6.2 -property:WindowsTargetPlatformVersion=${{env.WINDOWS_TARGET_PLATFORM_VERSION}} -detailedsummary:True "sdk\Samples\Samples.VS2013.sln"
 
     # package.sh
     - name: Package
@@ -118,7 +118,7 @@ jobs:
         New-Item "$PackagePlatform\Plugins" -ItemType Directory
         New-Item "$PackagePlatform\Themes" -ItemType Directory
 
-        Copy-Item "$Target\Release\TVTest.exe", "$Target\${{env.BUILD_CONFIGURATION}}\TVTest_Image.dll", "data\TVTest.chm" -Destination "$PackagePlatform" -PassThru
+        Copy-Item "$Target\${{env.BUILD_CONFIGURATION}}\TVTest.exe", "$Target\${{env.BUILD_CONFIGURATION}}\TVTest_Image.dll", "data\TVTest.chm" -Destination "$PackagePlatform" -PassThru
         Copy-Item "doc" -Destination "$PackagePlatform" -Recurse -PassThru
         Copy-Item "data\*.ini" -Destination "$PackagePlatform" -PassThru
         Copy-Item "data\Themes\*.httheme" -Destination "$PackagePlatform\Themes" -PassThru
