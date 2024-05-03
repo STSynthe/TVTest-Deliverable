@@ -57,8 +57,8 @@ jobs:
     - name: Add Variable
       id: variables
       run: |
-        Add-Content -Path "${{env.GITHUB_OUTPUT}}" -Value "TVTEST_SHA=$(git log -1 --format=%H)"
-        Add-Content -Path "${{env.GITHUB_OUTPUT}}" -Value "TVTEST_VERSION=$((Select-String -Path src\TVTestVersion.h -Raw -Pattern "#define VERSION_TEXT_A") -replace '[^"]+"([0-9\.]+)"', '$1')"
+        Add-Content -Path "$Env:GITHUB_OUTPUT" -Value "TVTEST_SHA=$(git log -1 --format=%H)"
+        Add-Content -Path "$Env:GITHUB_OUTPUT" -Value "TVTEST_VERSION=$((Select-String -Path src\TVTestVersion.h -Raw -Pattern "#define VERSION_TEXT_A") -replace '[^"]+"([0-9\.]+)"', '$1')"
 
     - name: Build LibISDB
       run: |
@@ -107,8 +107,8 @@ jobs:
         $TargetPlugins = "sdk\Samples\$TypePlatform\${{env.BUILD_PLUGIN_CONFIGURATION}}"
         Copy-Item "$TargetPlugins\*.tvtp", "$TargetPlugins\*.dll" -Destination "$PackagePlatform\Plugins" -PassThru
 
-        Add-Content -Path "${{env.GITHUB_OUTPUT}}" -Value "TVTEST_EXE=$((Get-FileHash -Algorithm MD5 '$Target\TVTest.exe').Hash)"
-        Add-Content -Path "${{env.GITHUB_OUTPUT}}" -Value "TVTEST_IMAGE_DLL=$((Get-FileHash -Algorithm MD5 '$Target\TVTest_Image.dll').Hash)"
+        Add-Content -Path "$Env:GITHUB_OUTPUT" -Value "TVTEST_EXE=$((Get-FileHash -Algorithm MD5 '$Target\TVTest.exe').Hash)"
+        Add-Content -Path "$Env:GITHUB_OUTPUT" -Value "TVTEST_IMAGE_DLL=$((Get-FileHash -Algorithm MD5 '$Target\TVTest_Image.dll').Hash)"
 
     - name: Upload
       uses: actions/upload-artifact@v4
