@@ -107,8 +107,8 @@ jobs:
         $TargetPlugins = "sdk\Samples\$TypePlatform\${{env.BUILD_PLUGIN_CONFIGURATION}}"
         Copy-Item "$TargetPlugins\*.tvtp", "$TargetPlugins\*.dll" -Destination "$PackagePlatform\Plugins" -PassThru
 
-        Add-Content -Path "$Env:GITHUB_OUTPUT" -Value "TVTEST_EXE=$((Get-FileHash -Algorithm MD5 '$Target\TVTest.exe').Hash)"
-        Add-Content -Path "$Env:GITHUB_OUTPUT" -Value "TVTEST_IMAGE_DLL=$((Get-FileHash -Algorithm MD5 '$Target\TVTest_Image.dll').Hash)"
+        Add-Content -Path "$Env:GITHUB_OUTPUT" -Value "TVTEST_EXE=$((Get-FileHash -Algorithm MD5 "$PackagePlatform\TVTest.exe").Hash)"
+        Add-Content -Path "$Env:GITHUB_OUTPUT" -Value "TVTEST_IMAGE_DLL=$((Get-FileHash -Algorithm MD5 "$PackagePlatform\TVTest_Image.dll").Hash)"
 
     - name: Upload
       uses: actions/upload-artifact@v4
