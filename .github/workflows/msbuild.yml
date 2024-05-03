@@ -22,7 +22,7 @@ env:
   FDKAAC_REF: v2.0.3
 
 permissions:
-  contents: read
+  contents: write
 
 defaults:
   run:
@@ -39,6 +39,7 @@ jobs:
 
     env:
       TVTEST_PLATFORM: ${{ matrix.platform == 'x86' && 'Win32' || matrix.platform }}
+      WINDOWS_TARGET_PLATFORM_VERSION: "10.0" # Windows 11 SDK Latest
 
     steps:
     - name: Checkout
@@ -56,10 +57,10 @@ jobs:
     - name: Add Variable
       id: variables
       run: |
-        Add-Content -Path "${{env.GITHUB_OUTPUT}}" -Value "GIT_TVTEST_SHA=$(git log -1 --format=%H)"
-        Add-Content -Path "${{env.GITHUB_OUTPUT}}" -Value "GIT_TVTEST_VERSION=$((Select-String -Path src\TVTestVersion.h -Raw -Pattern "#define VERSION_TEXT_A") -replace '[^"]+"([0-9\.]+)"', '$1')"
+        Add-Content -Path "${{env.GITHUB_OUTPUT}}" -Value "TVTEST_SHA=$(git log -1 --format=%H)"
+        Add-Content -Path "${{env.GITHUB_OUTPUT}}" -Value "TVTEST_VERSION=$((Select-String -Path src\TVTestVersion.h -Raw -Pattern "#define VERSION_TEXT_A") -replace '[^"]+"([0-9\.]+)"', '$1')"
 
-    - name: Pre-Build
+    - name: Build LibISDB
       run: |
         git submodule set-branch --branch develop src/LibISDB
         git submodule update --init --depth 1 src/LibISDB
@@ -68,47 +69,67 @@ jobs:
         Set-Location Thirdparty\fdk-aac
         git checkout ${{env.FDKAAC_REF}}
         Set-Location ..\..\..\..\
-        msbuild -maxCpuCount -target:Build -property:Configuration=${{env.BUILD_CONFIGURATION}} -property:Platform=${{matrix.platform}} src\LibISDB\Projects\LibISDB.sln
+        msbuild -maxCpuCount -target:Build -property:Configuration=${{env.BUILD_CONFIGURATION}} -property:Platform=${{matrix.platform}} -property:WindowsTargetPlatformVersion=${{env.WINDOWS_TARGET_PLATFORM_VERSION}} src\LibISDB\Projects\LibISDB.sln
 
     - name: Build
       # Add additional options to the MSBuild command line here (like platform or verbosity level).
       # See https://docs.microsoft.com/visualstudio/msbuild/msbuild-command-line-reference
-      run: |
-        msbuild -maxCpuCount -target:Build -property:Configuration=${{env.BUILD_CONFIGURATION}} -property:Platform=${{env.TVTEST_PLATFORM}} src\TVTest.sln
-        msbuild -maxCpuCount -target:Build -property:Configuration=${{env.BUILD_PLUGIN_CONFIGURATION}} -property:Platform=${{env.TVTEST_PLATFORM}} sdk\Samples\Samples.sln
+      run: msbuild -maxCpuCount -target:Build -property:Configuration=${{env.BUILD_CONFIGURATION}} -property:Platform=${{env.TVTEST_PLATFORM}} -property:WindowsTargetPlatformVersion=${{env.WINDOWS_TARGET_PLATFORM_VERSION}} src\TVTest.sln
+
+    - name: Build Plugin
+      run: msbuild -maxCpuCount -target:Build -property:Configuration=${{env.BUILD_PLUGIN_CONFIGURATION}} -property:Platform=${{env.TVTEST_PLATFORM}} -property:WindowsTargetPlatformVersion=${{env.WINDOWS_TARGET_PLATFORM_VERSION}} sdk\Samples\Samples.sln
 
     # package.sh
     - name: Package
+      id: package
       run: |
-        $DirPackageRoot = "${{github.workspace}}\package"
+        $PackageRoot = "${{github.workspace}}\package"
 
-        New-Item "$DirPackageRoot" -ItemType Directory
+        New-Item "$PackageRoot" -ItemType Directory
 
         $TypePlatform = "${{env.TVTEST_PLATFORM}}"
 
-        $DirPlatform = "$DirPackageRoot\$Env:TVTEST_NAME-$TypePlatform"
-        $DirTarget = "${{github.workspace}}\src\$TypePlatform\$Env:BUILD_CONFIGURATION"
+        $PackagePlatform = "$PackageRoot\${{env.TVTEST_NAME}}-$TypePlatform"
+        $Target = "src\$TypePlatform\${{env.BUILD_CONFIGURATION}}"
 
-        New-Item "$DirPlatform" -ItemType Directory
-        New-Item "$DirPlatform\Plugins" -ItemType Directory
-        New-Item "$DirPlatform\Themes" -ItemType Directory
+        New-Item "$PackagePlatform" -ItemType Directory
+        New-Item "$PackagePlatform\Plugins" -ItemType Directory
+        New-Item "$PackagePlatform\Themes" -ItemType Directory
 
-        Copy-Item "$DirTarget\TVTest.exe", "$DirTarget\TVTest_Image.dll", "$DirTarget\TVTest.chm" -Destination "$DirPlatform" -PassThru
-        Copy-Item "doc" -Destination "$DirPlatform" -Recurse -PassThru
-        Copy-Item "data\*.ini" -Destination "$DirPlatform" -PassThru
-        Copy-Item "data\Themes\*.httheme" -Destination "$DirPlatform\Themes" -PassThru
-        $PathTVTestLogo = "data\TVTest_Logo.bmp"
-        if ("x64" -ceq $TypePlatform) {$PathTVTestLogo = "data\Data_x64\TVTest_Logo.bmp"}
-        Copy-Item "$PathTVTestLogo" -Destination "$DirPlatform" -PassThru
+        Copy-Item "$Target\TVTest.exe", "$Target\TVTest_Image.dll", "$Target\TVTest.chm" -Destination "$PackagePlatform" -PassThru
+        Copy-Item "doc" -Destination "$PackagePlatform" -Recurse -PassThru
+        Copy-Item "data\*.ini" -Destination "$PackagePlatform" -PassThru
+        Copy-Item "data\Themes\*.httheme" -Destination "$PackagePlatform\Themes" -PassThru
+        $LogoPath = "data"
+        if ("x64" -ceq $TypePlatform) {$LogoPath = "data\Data_x64"}
+        Copy-Item "$LogoPath\TVTest_Logo.bmp" -Destination "$PackagePlatform" -PassThru
 
-        $DirTargetPlugins = "${{github.workspace}}\sdk\Samples\$TypePlatform\$Env:BUILD_PLUGIN_CONFIGURATION"
-        Copy-Item "$DirTargetPlugins\*.tvtp", "$DirTargetPlugins\*.dll" -Destination "$DirPlatform\Plugins" -PassThru
+        $TargetPlugins = "sdk\Samples\$TypePlatform\${{env.BUILD_PLUGIN_CONFIGURATION}}"
+        Copy-Item "$TargetPlugins\*.tvtp", "$TargetPlugins\*.dll" -Destination "$PackagePlatform\Plugins" -PassThru
+
+        Add-Content -Path "${{env.GITHUB_OUTPUT}}" -Value "TVTEST_EXE=$((Get-FileHash -Algorithm MD5 '$Target\TVTest.exe').Hash)"
+        Add-Content -Path "${{env.GITHUB_OUTPUT}}" -Value "TVTEST_IMAGE_DLL=$((Get-FileHash -Algorithm MD5 '$Target\TVTest_Image.dll').Hash)"
 
     - name: Upload
       uses: actions/upload-artifact@v4
-      env:
-        ARTIFACT_NAME: "${{env.TVTEST_NAME}}_v${{steps.variables.outputs.GIT_TVTEST_VERSION}}-${{matrix.platform}}+${{steps.variables.outputs.GIT_TVTEST_SHA}}"
       with:
-        name: ${{env.ARTIFACT_NAME}}
+        name: "${{env.TVTEST_NAME}}_v${{steps.variables.outputs.TVTEST_VERSION}}-${{matrix.platform}}+${{steps.variables.outputs.TVTEST_SHA}}"
         compression-level: 7
         path: package\*
+
+    - name: Release
+      uses: softprops/action-gh-release@v2
+      with:
+        name: "${{env.TVTEST_NAME}}_v${{steps.variables.outputs.TVTEST_VERSION}}-${{matrix.platform}}+DBCTRADO/TVTest@${{steps.variables.outputs.TVTEST_SHA}}"
+        tag_name: "v${{steps.variables.outputs.TVTEST_VERSION}}"
+        body: |
+          開発途中のビルド済み**TVTest v${{steps.variables.outputs.TVTEST_VERSION}}** + DBCTRADO/TVTest@${{steps.variables.outputs.TVTEST_SHA}} 版です。
+          開発途中の版は安定して動作しない場合があります。理解した上でご使用下さい。また旧版の利用も検討して下さい。
+
+          ```
+          # 主要ファイルのハッシュ値です。改竄チェックに役立ちます。
+          ${{steps.package.outputs.TVTEST_EXE}}  TVTest.exe
+          ${{steps.package.outputs.TVTEST_IMAGE_DLL}}  TVTest_Image.dll
+          ```
+        draft: true
+        files: package\*
