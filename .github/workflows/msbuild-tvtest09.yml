@@ -34,8 +34,8 @@ jobs:
     env:
       TVTEST_PLATFORM: Win32
       PLATFORM_TOOLSET: v142
-      WINDOWS_TARGET_PLATFORM_VERSION: "10.0.20348.0" # Windows 10 SDK Version 2104 
-      CL: "/source-charset:Shift_JIS /execution-charset:Shift_JIS"
+      WINDOWS_TARGET_PLATFORM_VERSION: "10.0.22621.0"
+      CL: "/source-charset:Shift_JIS"
 
     defaults:
       run:
@@ -92,7 +92,7 @@ jobs:
       shell: cmd
       run: chcp 932 > nul && msbuild -maxCpuCount -target:Build -property:Configuration=${{env.BUILD_CONFIGURATION}} -property:Platform=${{env.TVTEST_PLATFORM}} -property:PlatformToolset=${{env.PLATFORM_TOOLSET}} -property:WindowsTargetPlatformVersion=${{env.WINDOWS_TARGET_PLATFORM_VERSION}} -detailedsummary:True "src\TVTest_All.VS2013.sln"
 
-    - name: Plugin Build
+    - name: Build Plugin 
       shell: cmd
       run: chcp 932 > nul && msbuild -maxCpuCount -target:Build -property:Configuration=${{env.BUILD_PLUGIN_CONFIGURATION}} -property:Platform=${{env.TVTEST_PLATFORM}} -property:PlatformToolset=${{env.PLATFORM_TOOLSET}} -property:WindowsTargetPlatformVersion=${{env.WINDOWS_TARGET_PLATFORM_VERSION}} -detailedsummary:True "sdk\Samples\Samples.VS2013.sln"
 
@@ -116,8 +116,8 @@ jobs:
         Copy-Item "doc" -Destination "$PackagePlatform" -Recurse -PassThru
         Copy-Item "data\*.ini" -Destination "$PackagePlatform" -PassThru
         Copy-Item "data\Themes\*.httheme" -Destination "$PackagePlatform\Themes" -PassThru
-        $LogoPath = "data\TVTest_Logo.bmp"
-        Copy-Item "$LogoPath" -Destination "$PackagePlatform" -PassThru
+        $LogoPath = "data"
+        Copy-Item "$LogoPath\TVTest_Logo.bmp" -Destination "$PackagePlatform" -PassThru
 
         $TargetPlugins = "sdk\Samples\$TypePlatform\${{env.BUILD_PLUGIN_CONFIGURATION}}"
         Copy-Item "$TargetPlugins\*.tvtp", "$TargetPlugins\*.dll" -Destination "$PackagePlatform\Plugins" -PassThru
